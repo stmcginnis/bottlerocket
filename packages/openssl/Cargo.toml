@@ -1,0 +1,20 @@
+[package]
+name = "openssl"
+version = "0.1.0"
+edition = "2018"
+publish = false
+build = "build.rs"
+
+[lib]
+path = "pkg.rs"
+
+[package.metadata.build-package]
+releases-url = "https://www.openssl.org/source/old/"
+
+[[package.metadata.build-package.external-files]]
+url = "https://www.openssl.org/source/old/3.0/openssl-3.0.5.tar.gz"
+sha512 = "782b0df3d0252468aa696bd74a3b661810499819c0df849aa9698ba0e06a845820dc856aac650fced4be234f1271e576d4317ac3ab1406cf0ffe087d695d20fe"
+
+[build-dependencies]
+glibc = { path = "../glibc" }
+

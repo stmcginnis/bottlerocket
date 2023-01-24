@@ -365,6 +365,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fluent-bit"
+version = "0.1.0"
+dependencies = [
+ "glibc",
+ "openssl",
+]
+
+[[package]]
 name = "glibc"
 version = "0.1.0"
 
@@ -906,6 +914,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "openssl"
+version = "0.1.0"
+dependencies = [
+ "glibc",
+]
+
+[[package]]
 name = "os"
 version = "0.1.0"
 dependencies = [
@@ -954,6 +969,7 @@ dependencies = [
  "e2fsprogs",
  "filesystem",
  "findutils",
+ "fluent-bit",
  "glibc",
  "grep",
  "grub",

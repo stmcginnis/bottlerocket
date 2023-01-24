@@ -1,0 +1,20 @@
+[package]
+name = "fluent-bit"
+version = "0.1.0"
+edition = "2018"
+publish = false
+build = "build.rs"
+
+[lib]
+path = "pkg.rs"
+
+[package.metadata.build-package]
+releases-url = "https://github.com/fluent/fluent-bit/releases"
+
+[[package.metadata.build-package.external-files]]
+url = "https://github.com/fluent/fluent-bit/archive/v2.0.8/fluent-bit-v2.0.8.tar.gz"
+sha512 = "ca88d00a376565e65234b9a24f651ce0de945890b0907f7866a8d5360bddba2b792c84556956f41944fa293d403536c6e36c43d364d71482188694292ceab4b4"
+
+[build-dependencies]
+glibc = { path = "../glibc" }
+openssl = { path = "../openssl" }

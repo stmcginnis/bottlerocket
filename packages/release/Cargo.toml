@@ -25,6 +25,7 @@ dbus-broker = { path = "../dbus-broker" }
 e2fsprogs = { path = "../e2fsprogs" }
 filesystem = { path = "../filesystem" }
 findutils = { path = "../findutils" }
+fluent-bit = { path = "../fluent-bit" }
 glibc = { path = "../glibc" }
 grep = { path = "../grep" }
 grub = { path = "../grub" }
