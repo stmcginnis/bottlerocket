@@ -885,6 +885,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bloodhound"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "generate-readme",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "bootstrap-containers"
 version = "0.1.0"
 dependencies = [

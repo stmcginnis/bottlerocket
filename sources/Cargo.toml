@@ -42,6 +42,8 @@ members = [
     "api/migration/migrations/v1.13.0/public-control-container-v0-7-1",
     "api/migration/migrations/v1.13.1/aws-profile-cred-provider",
 
+    "bloodhound",
+
     "bottlerocket-release",
 
     "bottlerocket-variant",
