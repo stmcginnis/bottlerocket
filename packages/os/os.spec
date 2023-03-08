@@ -63,6 +63,7 @@ Source301: ebs-volumes.rules
 BuildRequires: %{_cross_os}glibc-devel
 Requires: %{_cross_os}apiclient
 Requires: %{_cross_os}apiserver
+Requires: %{_cross_os}bloodhound
 Requires: %{_cross_os}bootstrap-containers
 Requires: %{_cross_os}bork
 Requires: %{_cross_os}corndog
@@ -76,6 +77,7 @@ Requires: %{_cross_os}migration
 Requires: %{_cross_os}netdog
 Requires: %{_cross_os}prairiedog
 Requires: %{_cross_os}schnauzer
+Requires: %{_cross_os}shimpei
 Requires: %{_cross_os}settings-committer
 Requires: %{_cross_os}signpost
 Requires: %{_cross_os}storewolf
@@ -83,7 +85,6 @@ Requires: %{_cross_os}sundog
 Requires: %{_cross_os}thar-be-settings
 Requires: %{_cross_os}thar-be-updates
 Requires: %{_cross_os}updog
-Requires: %{_cross_os}shimpei
 
 %if %{with aws_k8s_family}
 Requires: %{_cross_os}pluto
@@ -279,6 +280,11 @@ Summary: Manages bootstrap-containers
 %description -n %{_cross_os}bootstrap-containers
 %{summary}.
 
+%package -n %{_cross_os}bloodhound
+Summary: Compliance check framework
+%description -n %{_cross_os}bloodhound
+%{summary}.
+
 %prep
 %setup -T -c
 %cargo_prep
@@ -337,6 +343,7 @@ echo "** Output from non-static builds:"
     -p prairiedog \
     -p certdog \
     -p shimpei \
+    -p bloodhound \
     %{?with_ecs_runtime: -p ecs-settings-applier} \
     %{?with_aws_platform: -p shibaken -p cfsignal} \
     %{?with_aws_k8s_family: -p pluto} \
@@ -362,7 +369,7 @@ for p in \
   migrator prairiedog certdog \
   signpost updog metricdog logdog \
   ghostdog bootstrap-containers \
-  shimpei \
+  shimpei bloodhound \
   %{?with_ecs_runtime: ecs-settings-applier} \
   %{?with_aws_platform: shibaken cfsignal} \
   %{?with_aws_k8s_family: pluto} \
@@ -601,5 +608,8 @@ install -p -m 0644 %{S:121} %{buildroot}%{_cross_unitdir}
 %{_cross_bindir}/bootstrap-containers
 %{_cross_unitdir}/bootstrap-containers@.service
 %{_cross_tmpfilesdir}/bootstrap-containers.conf
+
+%files -n %{_cross_os}bloodhound
+%{_cross_bindir}/bloodhound
 
 %changelog
