@@ -133,6 +133,16 @@ pub enum Error {
     #[snafu(display("Failed to reboot, exit code: {}, stderr: {}", exit_code, stderr))]
     Reboot { exit_code: i32, stderr: String },
 
+    #[snafu(display("Unable to generate CIS compliance report: {}", source))]
+    CisExec { source: io::Error },
+
+    #[snafu(display(
+        "Failed to generate CIS compliance report, exit code: {}, stderr: {}",
+        exit_code,
+        stderr
+    ))]
+    CisResult { exit_code: i32, stderr: String },
+
     // =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=
 
     // Update related errors

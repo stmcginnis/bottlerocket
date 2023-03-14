@@ -27,6 +27,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync;
 use thar_be_updates::status::{UpdateStatus, UPDATE_LOCKFILE};
+use tokio::process::Command as AsyncCommand;
 
 // =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=
 
@@ -121,6 +122,7 @@ where
             )
             .service(web::scope("/updates").route("/status", web::get().to(get_update_status)))
             .service(web::resource("/exec").route(web::get().to(exec::ws_exec)))
+            .service(web::scope("/cis-report").route("", web::get().to(get_cis_benchmark)))
     })
     .workers(threads)
     .bind_uds(socket_path.as_ref())
@@ -543,6 +545,39 @@ async fn reboot() -> Result<HttpResponse> {
     Ok(HttpResponse::NoContent().finish())
 }
 
+/// Triggers a bloodhound check for compliance and returns the results. Defaults
+/// to level 1 text report unless specified otherwise.
+async fn get_cis_benchmark(query: web::Query<HashMap<String, String>>) -> Result<HttpResponse> {
+    info!("Running CIS benchmark");
+
+    let mut cmd = AsyncCommand::new("/usr/bin/bloodhound");
+
+    // Check for requested level, default is 1
+    if let Some(level) = query.get("level") {
+        cmd.arg("-l").arg(level);
+    }
+
+    // Check for requested format, default is text
+    if let Some(format) = query.get("format") {
+        cmd.arg("-f").arg(format);
+    }
+
+    let output = cmd.output().await.context(error::CisExecSnafu)?;
+    ensure!(
+        output.status.success(),
+        error::CisResultSnafu {
+            exit_code: match output.status.code() {
+                Some(code) => code,
+                None => output.status.signal().unwrap_or(1),
+            },
+            stderr: String::from_utf8_lossy(&output.stderr),
+        }
+    );
+    Ok(HttpResponse::Ok()
+        .content_type("application/text")
+        .body(String::from_utf8_lossy(&output.stdout).to_string()))
+}
+
 // =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=
 
 // Helpers for handler methods called by the router
@@ -618,6 +653,8 @@ impl ResponseError for error::Error {
             UpdateStatusParse { .. } => StatusCode::INTERNAL_SERVER_ERROR,
             UpdateInfoParse { .. } => StatusCode::INTERNAL_SERVER_ERROR,
             UpdateLockOpen { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            CisExec { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            CisResult { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         HttpResponse::build(status_code).body(self.to_string())

@@ -451,3 +451,32 @@ paths:
           description: "Connection upgraded to WebSocket"
         500:
           description: "Server error"
+
+  /cis-report:
+    get:
+      summary: "Get CIS compliance report"
+      operationId: "cis-report"
+      parameters:
+        - in: query
+          name: level
+          description: "The CIS compliance level to test (1 or 2). Default level is 1."
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2
+          required: false
+        - in: query
+          name: format
+          description: "The CIS compliance report format (text or json). Default format is text."
+          schema:
+            type: string
+          required: false
+      responses:
+        200:
+          description: "Successful request"
+          content:
+            application/json:
+              schema:
+                $ref: "String"
+        500:
+          description: "Server error"
