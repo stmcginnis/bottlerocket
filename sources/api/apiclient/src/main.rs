@@ -6,7 +6,7 @@
 // library calls based on the given flags, etc.)  The library modules contain the code for talking
 // to the API, which is intended to be reusable by other crates.
 
-use apiclient::{apply, exec, get, reboot, set, update};
+use apiclient::{apply, cisreport, exec, get, reboot, set, update};
 use datastore::{serialize_scalar, Key, KeyType};
 use log::{info, log_enabled, trace, warn};
 use simplelog::{
@@ -48,6 +48,7 @@ enum Subcommand {
     Reboot(RebootArgs),
     Set(SetArgs),
     Update(UpdateSubcommand),
+    CisReport(CisReportArgs),
 }
 
 /// Stores user-supplied arguments for the 'apply' subcommand.
@@ -113,6 +114,13 @@ struct UpdateApplyArgs {
 #[derive(Debug)]
 struct UpdateCancelArgs {}
 
+/// Stores user-supplied arguments for the cisreport subcommand.
+#[derive(Debug)]
+struct CisReportArgs {
+    level: Option<i32>,
+    format: Option<String>,
+}
+
 /// Informs the user about proper usage of the program and exits.
 fn usage() -> ! {
     let msg = &format!(
@@ -136,6 +144,7 @@ fn usage() -> ! {
             update cancel              Deactivates an applied update.
             reboot                     Reboots the host.
             exec                       Execute a command in a host container.
+            cisreport                  Report CIS compliance status.
 
         raw options:
             -u, --uri URI              Required; URI to request from the server, e.g. /tx
@@ -185,7 +194,11 @@ fn usage() -> ! {
 
             TARGET                     Required; the name of the container in which to run the command.
             COMMAND                    Required; the command to run.
-            [ ARG ...]                 Any desired arguments to the command."#,
+            [ ARG ...]                 Any desired arguments to the command.
+
+        cisreport options:
+            -f, --format               Format of the CIS report (text or json). Default format is text.
+            -l, --level                CIS compliance level to report on (1 or 2). Default is 1."#,
         socket = constants::API_SOCKET,
         method = DEFAULT_METHOD,
     );
@@ -233,7 +246,7 @@ fn parse_args(args: env::Args) -> (Args, Subcommand) {
             }
 
             // Subcommands
-            "raw" | "apply" | "exec" | "get" | "reboot" | "set" | "update"
+            "raw" | "apply" | "exec" | "get" | "reboot" | "set" | "update" | "cisreport"
                 if subcommand.is_none() && !arg.starts_with('-') =>
             {
                 subcommand = Some(arg)
@@ -253,6 +266,7 @@ fn parse_args(args: env::Args) -> (Args, Subcommand) {
         Some("reboot") => (global_args, parse_reboot_args(subcommand_args)),
         Some("set") => (global_args, parse_set_args(subcommand_args)),
         Some("update") => (global_args, parse_update_args(subcommand_args)),
+        Some("cisreport") => (global_args, parse_cisreport_args(subcommand_args)),
         _ => usage_msg("Missing or unknown subcommand"),
     }
 }
@@ -550,6 +564,38 @@ fn parse_update_cancel_args(args: Vec<String>) -> UpdateSubcommand {
     UpdateSubcommand::Cancel(UpdateCancelArgs {})
 }
 
+/// Parses arguments for the 'cisreport' subcommand.
+fn parse_cisreport_args(args: Vec<String>) -> Subcommand {
+    let mut level: Option<i32> = None;
+    let mut format = None;
+
+    let mut iter = args.into_iter();
+    while let Some(arg) = iter.next() {
+        match arg.as_ref() {
+            "-l" | "--level" => {
+                let level_str = iter
+                    .next()
+                    .unwrap_or_else(|| usage_msg("Did not give argument to -l | --level"));
+                let level_int = level_str
+                    .parse::<i32>()
+                    .unwrap_or_else(|_| usage_msg("Invalid argument to -l | --level"));
+                level = Some(level_int);
+            }
+
+            "-f" | "--format" => {
+                format = Some(
+                    iter.next()
+                        .unwrap_or_else(|| usage_msg("Did not give argument to -f | --format")),
+                )
+            }
+
+            x => usage_msg(format!("Unknown argument '{}'", x)),
+        }
+    }
+
+    Subcommand::CisReport(CisReportArgs { level, format })
+}
+
 // =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=   =^..^=
 // Helpers
 
@@ -735,6 +781,16 @@ async fn run() -> Result<()> {
                     .context(error::UpdateCancelSnafu)?;
             }
         },
+
+        Subcommand::CisReport(cis_args) => {
+            let body = cisreport::get_report(&args.socket_path, cis_args.format, cis_args.level)
+                .await
+                .context(error::CisReportSnafu)?;
+
+            if !body.is_empty() {
+                println!("{}", body);
+            }
+        }
     }
 
     Ok(())
@@ -752,7 +808,7 @@ async fn main() {
 }
 
 mod error {
-    use apiclient::{apply, exec, get, reboot, set, update};
+    use apiclient::{apply, cisreport, exec, get, reboot, set, update};
     use snafu::Snafu;
 
     #[derive(Debug, Snafu)]
@@ -806,6 +862,9 @@ mod error {
 
         #[snafu(display("Failed to check for updates: {}", source))]
         UpdateCheck { source: update::Error },
+
+        #[snafu(display("Failed to get CIS compliance report: {}", source))]
+        CisReport { source: cisreport::Error },
     }
 }
 type Result<T> = std::result::Result<T, error::Error>;
