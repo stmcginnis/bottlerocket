@@ -5,6 +5,7 @@ use std::process::Command;
 const PROC_MODULES_FILE: &str = "/proc/modules";
 const PROC_CMDLINE_FILE: &str = "/proc/cmdline";
 const LOCKDOWN_FILE: &str = "/sys/kernel/security/lockdown";
+const JOURNALD_CONF_FILE: &str = "/usr/lib/systemd/journald.conf.d/journald.conf";
 const SYSCTL_CMD: &str = "/usr/sbin/sysctl";
 const SYSTEMCTL_CMD: &str = "/usr/bin/systemctl";
 const MODPROBE_CMD: &str = "/bin/modprobe";
@@ -1192,6 +1193,42 @@ impl results::Checker for BR03040202Checker {
             id: "3.4.2.2".to_string(),
             level: 2,
             name: "br03040202".to_string(),
+            mode: results::Mode::Automatic,
+        }
+    }
+}
+
+// =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
+
+pub struct BR04010101Checker {}
+
+impl results::Checker for BR04010101Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::SKIP,
+        };
+
+        if let Some(found) = look_for_string_in_file(JOURNALD_CONF_FILE, "Storage=persistent") {
+            if !found {
+                result.error = "journald is not configured".to_string();
+                result.status = results::CheckStatus::FAIL;
+            } else {
+                result.status = results::CheckStatus::PASS;
+            }
+        } else {
+            result.error = "unable to verify journald settings".to_string();
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure journald is configured to write logs to persistent disk".to_string(),
+            id: "4.1.1.1".to_string(),
+            level: 1,
+            name: "br04010101".to_string(),
             mode: results::Mode::Automatic,
         }
     }
