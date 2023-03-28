@@ -176,3 +176,43 @@ impl results::Checker for BR01040100Checker {
         }
     }
 }
+
+// =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
+
+pub struct BR01040200Checker {}
+
+impl results::Checker for BR01040200Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::SKIP,
+        };
+
+        if let Some(found) = look_for_string_in_output(
+            SYSCTL_CMD,
+            ["kernel.randomize_va_space"],
+            "kernel.randomize_va_space = 2",
+        ) {
+            if !found {
+                result.error = "Address space layout randomization is not enabled".to_string();
+                result.status = results::CheckStatus::FAIL;
+            } else {
+                result.status = results::CheckStatus::PASS;
+            }
+        } else {
+            result.error = "unable to verify kernel.randomize_va_space setting".to_string();
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure address space layout randomization (ASLR) is enabled".to_string(),
+            id: "1.4.2".to_string(),
+            level: 1,
+            name: "br01040200".to_string(),
+            mode: results::Mode::Automatic,
+        }
+    }
+}
