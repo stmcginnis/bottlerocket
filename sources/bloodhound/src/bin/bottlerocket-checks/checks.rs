@@ -10,6 +10,7 @@ const SYSTEMCTL_CMD: &str = "/usr/bin/systemctl";
 const MODPROBE_CMD: &str = "/bin/modprobe";
 const SESTATUS_CMD: &str = "/usr/bin/sestatus";
 const APICLIENT_CMD: &str = "/usr/bin/apiclient";
+const IPTABLES_CMD: &str = "/usr/sbin/iptables";
 
 // =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
 
@@ -921,6 +922,62 @@ impl results::Checker for BR03030100Checker {
             id: "3.3.1".to_string(),
             level: 2,
             name: "br03030100".to_string(),
+            mode: results::Mode::Automatic,
+        }
+    }
+}
+
+// =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
+
+pub struct BR03040101Checker {}
+
+impl results::Checker for BR03040101Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::SKIP,
+        };
+
+        let to_match = &vec![
+            "Chain INPUT (policy DROP)",
+            "Chain FORWARD (policy DROP)",
+            "Chain OUTPUT (policy DROP)",
+        ];
+
+        if let Ok(output) = Command::new(IPTABLES_CMD).args(["-L"]).output() {
+            let mut matched = 0;
+
+            if output.status.success() {
+                let std_output = String::from_utf8_lossy(&output.stdout).to_string();
+                for line in std_output.lines() {
+                    for match_line in to_match {
+                        if line.contains(match_line) {
+                            matched += 1;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if to_match.len() == matched {
+                result.status = results::CheckStatus::PASS;
+            } else {
+                result.error = "Unable to find expected iptables values".to_string();
+                result.status = results::CheckStatus::FAIL;
+            }
+        } else {
+            result.error = "unable to verify iptables settings".to_string();
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure IPv4 default deny firewall policy".to_string(),
+            id: "3.4.1.1".to_string(),
+            level: 2,
+            name: "br03040101".to_string(),
             mode: results::Mode::Automatic,
         }
     }
