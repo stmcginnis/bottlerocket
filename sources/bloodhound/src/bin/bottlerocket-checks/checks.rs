@@ -1,6 +1,8 @@
 use bloodhound::results;
 use bloodhound::*;
+use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
+use walkdir::WalkDir;
 
 const PROC_MODULES_FILE: &str = "/proc/modules";
 const PROC_CMDLINE_FILE: &str = "/proc/cmdline";
@@ -1229,6 +1231,49 @@ impl results::Checker for BR04010101Checker {
             id: "4.1.1.1".to_string(),
             level: 1,
             name: "br04010101".to_string(),
+            mode: results::Mode::Automatic,
+        }
+    }
+}
+
+// =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
+
+pub struct BR04010200Checker {}
+
+impl results::Checker for BR04010200Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::PASS,
+        };
+
+        // Recursively walk over all files in /var/log/journal and check perms
+        for file in WalkDir::new("/var/log/journal")
+            .into_iter()
+            .filter_map(|file| file.ok())
+        {
+            if let Ok(metadata) = file.metadata() {
+                if !metadata.is_file() {
+                    continue;
+                }
+
+                if (metadata.permissions().mode() & 0b111) > 0 {
+                    result.error = format!("file {:?} has permissions for 'other'", file.path());
+                    result.status = results::CheckStatus::FAIL;
+                    break;
+                }
+            }
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure permissions on journal files are configured".to_string(),
+            id: "4.1.2".to_string(),
+            level: 1,
+            name: "br04010200".to_string(),
             mode: results::Mode::Automatic,
         }
     }

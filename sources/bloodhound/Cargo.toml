@@ -12,6 +12,7 @@ exclude = ["README.md"]
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+walkdir = "2"
 
 [dev-dependencies]
 tempfile = "3"
