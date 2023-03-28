@@ -4,6 +4,7 @@ use std::process::Command;
 
 const PROC_MODULES_FILE: &str = "/proc/modules";
 const PROC_CMDLINE_FILE: &str = "/proc/cmdline";
+const LOCKDOWN_FILE: &str = "/sys/kernel/security/lockdown";
 const SYSCTL_CMD: &str = "/usr/sbin/sysctl";
 const MODPROBE_CMD: &str = "/bin/modprobe";
 const SESTATUS_CMD: &str = "/usr/bin/sestatus";
@@ -355,6 +356,42 @@ impl results::Checker for BR01050100Checker {
             id: "1.5.1".to_string(),
             level: 1,
             name: "br01050100".to_string(),
+            mode: results::Mode::Automatic,
+        }
+    }
+}
+
+// =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
+
+pub struct BR01050200Checker {}
+
+impl results::Checker for BR01050200Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::SKIP,
+        };
+
+        if let Some(found) = look_for_string_in_file(LOCKDOWN_FILE, "[integrity]") {
+            if !found {
+                result.error = "lockdown integrity mode is not enabled".to_string();
+                result.status = results::CheckStatus::FAIL;
+            } else {
+                result.status = results::CheckStatus::PASS;
+            }
+        } else {
+            result.error = "unable to verify lockdown mode".to_string();
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure Lockdown is configured".to_string(),
+            id: "1.5.2".to_string(),
+            level: 2,
+            name: "br01050200".to_string(),
             mode: results::Mode::Automatic,
         }
     }
