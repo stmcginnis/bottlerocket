@@ -867,3 +867,61 @@ impl results::Checker for BR03020700Checker {
         }
     }
 }
+
+// =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
+
+pub struct BR03030100Checker {}
+
+impl results::Checker for BR03030100Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::SKIP,
+        };
+
+        if result.status == results::CheckStatus::FAIL {
+            return result;
+        }
+
+        if let Some(found) = look_for_string_in_file(PROC_MODULES_FILE, "sctp") {
+            if found {
+                result.error = "sctp is currently loaded".to_string();
+                result.status = results::CheckStatus::FAIL;
+            } else {
+                result.status = results::CheckStatus::PASS;
+            }
+        } else {
+            result.error = "unable to parse modules to check for sctp".to_string();
+        }
+
+        if result.status == results::CheckStatus::FAIL {
+            return result;
+        }
+
+        if let Some(found) =
+            look_for_string_in_output(MODPROBE_CMD, ["-n", "-v", "sctp"], "install /bin/true")
+        {
+            if !found {
+                result.error = "modprobe for sctp is not disabled".to_string();
+                result.status = results::CheckStatus::FAIL;
+            } else {
+                result.status = results::CheckStatus::PASS;
+            }
+        } else {
+            result.error =
+                "unable to parse modprobe output to check if sctp is enabled".to_string();
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure SCTP is disabled".to_string(),
+            id: "3.3.1".to_string(),
+            level: 2,
+            name: "br03030100".to_string(),
+            mode: results::Mode::Automatic,
+        }
+    }
+}
