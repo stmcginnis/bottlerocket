@@ -6,8 +6,10 @@ const PROC_MODULES_FILE: &str = "/proc/modules";
 const PROC_CMDLINE_FILE: &str = "/proc/cmdline";
 const LOCKDOWN_FILE: &str = "/sys/kernel/security/lockdown";
 const SYSCTL_CMD: &str = "/usr/sbin/sysctl";
+const SYSTEMCTL_CMD: &str = "/usr/bin/systemctl";
 const MODPROBE_CMD: &str = "/bin/modprobe";
 const SESTATUS_CMD: &str = "/usr/bin/sestatus";
+const APICLIENT_CMD: &str = "/usr/bin/apiclient";
 
 // =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
 
@@ -392,6 +394,64 @@ impl results::Checker for BR01050200Checker {
             id: "1.5.2".to_string(),
             level: 2,
             name: "br01050200".to_string(),
+            mode: results::Mode::Automatic,
+        }
+    }
+}
+
+// =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
+
+pub struct BR02010101Checker {}
+
+impl results::Checker for BR02010101Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::SKIP,
+        };
+
+        if let Some(found) = look_for_string_in_output(
+            APICLIENT_CMD,
+            ["get", "settings.ntp.time-servers"],
+            "\"time-servers\": []",
+        ) {
+            if found {
+                result.error = "no ntp servers are configured".to_string();
+                result.status = results::CheckStatus::FAIL;
+            } else {
+                result.status = results::CheckStatus::PASS;
+            }
+        } else {
+            result.error = "unable to verify time-servers setting".to_string();
+        }
+
+        // Check if we need to continue
+        if result.status == results::CheckStatus::FAIL {
+            return result;
+        }
+
+        if let Some(found) =
+            look_for_string_in_output(SYSTEMCTL_CMD, ["is-active", "chronyd"], "active")
+        {
+            if !found {
+                result.error = "chronyd NTP service is not enabled".to_string();
+                result.status = results::CheckStatus::FAIL;
+            } else {
+                result.status = results::CheckStatus::PASS;
+            }
+        } else {
+            result.error = "unable to verify chronyd service enabled".to_string();
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure chrony is configured".to_string(),
+            id: "2.1.1.1".to_string(),
+            level: 1,
+            name: "br02010101".to_string(),
             mode: results::Mode::Automatic,
         }
     }
