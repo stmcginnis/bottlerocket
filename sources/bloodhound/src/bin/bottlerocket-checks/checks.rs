@@ -2,6 +2,7 @@ use bloodhound::results;
 use bloodhound::*;
 
 const PROC_MODULES_FILE: &str = "/proc/modules";
+const PROC_CMDLINE_FILE: &str = "/proc/cmdline";
 const MODPROBE_CMD: &str = "/bin/modprobe";
 
 // =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
@@ -69,5 +70,70 @@ fn check_modprobe(result: &mut results::CheckerResult) {
         }
     } else {
         result.error = "unable to parse modprobe output to check if udf is enabled".to_string();
+    }
+}
+
+// =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
+
+pub struct BR01030100Checker {}
+
+impl results::Checker for BR01030100Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::SKIP,
+        };
+
+        let mut enabled = true;
+        let mut skipped = false;
+        // This isn't the most efficient because it results in the proc file being opened, read, and closed three times.
+        // It is a single line, so there shouldn't be too much extra overhead compared to the simplicity of doing it
+        // this way, but if needed this should be changed to read the contents once, then check each expected value in
+        // the same content string.
+        if let Some(found) = look_for_string_in_file(PROC_CMDLINE_FILE, "dm-mod.create=root,,,ro,0")
+        {
+            if !found {
+                enabled = false;
+            }
+        } else {
+            skipped = true;
+        }
+
+        if let Some(found) = look_for_string_in_file(PROC_CMDLINE_FILE, "root=/dev/dm-0") {
+            if !found {
+                enabled = false;
+            }
+        } else {
+            skipped = true;
+        }
+
+        if let Some(found) = look_for_string_in_file(PROC_CMDLINE_FILE, "restart_on_corruption") {
+            if !found {
+                enabled = false;
+            }
+        } else {
+            skipped = true;
+        }
+
+        if skipped {
+            result.error = "unable to verify cmdline includes dm-verity settings".to_string();
+        } else if enabled {
+            result.status = results::CheckStatus::PASS;
+        } else {
+            result.error = "unable to verify dm-verity enforcement, settings not found".to_string();
+            result.status = results::CheckStatus::FAIL;
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure dm-verity is configured".to_string(),
+            id: "1.3.1".to_string(),
+            level: 1,
+            name: "br01030100".to_string(),
+            mode: results::Mode::Automatic,
+        }
     }
 }
