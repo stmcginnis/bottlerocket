@@ -456,3 +456,55 @@ impl results::Checker for BR02010101Checker {
         }
     }
 }
+
+// =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
+
+pub struct BR03010100Checker {}
+
+impl results::Checker for BR03010100Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::SKIP,
+        };
+
+        let settings = vec![
+            "net.ipv4.conf.all.send_redirects",
+            "net.ipv4.conf.default.send_redirects",
+        ];
+
+        for setting in settings {
+            if let Some(found) = look_for_string_in_output(
+                SYSCTL_CMD,
+                [setting],
+                format!("{} = 0", setting).as_str(),
+            ) {
+                if !found {
+                    result.error = format!("{} not disabled", setting);
+                    result.status = results::CheckStatus::FAIL;
+                } else {
+                    result.status = results::CheckStatus::PASS;
+                }
+            } else {
+                result.error = format!("unable to verify {} setting", setting);
+            }
+
+            // Check if we need to continue
+            if result.status == results::CheckStatus::FAIL {
+                return result;
+            }
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure packet redirect sending is disabled".to_string(),
+            id: "3.1.1".to_string(),
+            level: 2,
+            name: "br03010100".to_string(),
+            mode: results::Mode::Automatic,
+        }
+    }
+}
