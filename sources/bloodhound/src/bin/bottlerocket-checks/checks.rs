@@ -256,3 +256,43 @@ impl results::Checker for BR01040300Checker {
         }
     }
 }
+
+// =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
+
+pub struct BR01040400Checker {}
+
+impl results::Checker for BR01040400Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::SKIP,
+        };
+
+        if let Some(found) = look_for_string_in_output(
+            SYSCTL_CMD,
+            ["user.max_user_namespaces"],
+            "user.max_user_namespaces = 0",
+        ) {
+            if !found {
+                result.error = "User namespaces are not disabled".to_string();
+                result.status = results::CheckStatus::FAIL;
+            } else {
+                result.status = results::CheckStatus::PASS;
+            }
+        } else {
+            result.error = "unable to verify user.max_user_namespaces setting".to_string();
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure user namespaces are disabled".to_string(),
+            id: "1.4.4".to_string(),
+            level: 2,
+            name: "br01040400".to_string(),
+            mode: results::Mode::Automatic,
+        }
+    }
+}
