@@ -982,3 +982,82 @@ impl results::Checker for BR03040101Checker {
         }
     }
 }
+
+pub struct BR03040102Checker {}
+
+impl results::Checker for BR03040102Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::SKIP,
+        };
+
+        // Order matters here, so need to find the first one, then look for the second one
+        let first = (
+            "ACCEPT",
+            "--  lo     *       0.0.0.0/0            0.0.0.0/0",
+        );
+        let second = ("DROP", "--  *      *       127.0.0.0/8          0.0.0.0/0");
+
+        if let Ok(output) = Command::new(IPTABLES_CMD)
+            .args(["-L", "INPUT", "-v", "-n"])
+            .output()
+        {
+            let mut first_found = false;
+            let mut second_found = false;
+
+            if output.status.success() {
+                let std_output = String::from_utf8_lossy(&output.stdout).to_string();
+                for line in std_output.lines() {
+                    if !first_found && line.contains(first.0) && line.contains(first.1) {
+                        first_found = true;
+                        continue;
+                    }
+
+                    if first_found && line.contains(second.0) && line.contains(second.1) {
+                        second_found = true;
+                        break;
+                    }
+                }
+            }
+
+            if first_found && second_found {
+                result.status = results::CheckStatus::PASS;
+            } else {
+                result.error = "Unable to find expected iptables INPUT values".to_string();
+                result.status = results::CheckStatus::FAIL;
+                return result;
+            }
+        } else {
+            result.error = "unable to verify iptables INPUT settings".to_string();
+        }
+
+        if let Some(found) = look_for_string_in_output(
+            IPTABLES_CMD,
+            ["-L", "OUTPUT", "-v", "-n"],
+            "ACCEPT     0    --  *      lo      0.0.0.0/0            0.0.0.0/0",
+        ) {
+            if !found {
+                result.error = "iptables OUTPUT rule not found".to_string();
+                result.status = results::CheckStatus::FAIL;
+            } else {
+                result.status = results::CheckStatus::PASS;
+            }
+        } else {
+            result.error =
+                "unable to parse iptables OUTPUT rules to verify loopback policy".to_string();
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure IPv4 loopback traffic is configured".to_string(),
+            id: "3.4.1.2".to_string(),
+            level: 2,
+            name: "br03040102".to_string(),
+            mode: results::Mode::Automatic,
+        }
+    }
+}
