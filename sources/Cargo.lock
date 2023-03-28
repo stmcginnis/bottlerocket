@@ -892,6 +892,7 @@ dependencies = [
  "generate-readme",
  "serde",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]
