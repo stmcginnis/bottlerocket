@@ -216,3 +216,43 @@ impl results::Checker for BR01040200Checker {
         }
     }
 }
+
+// =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<= =>o.o<=
+
+pub struct BR01040300Checker {}
+
+impl results::Checker for BR01040300Checker {
+    fn execute(&self) -> results::CheckerResult {
+        let mut result = results::CheckerResult {
+            error: String::new(),
+            status: results::CheckStatus::SKIP,
+        };
+
+        if let Some(found) = look_for_string_in_output(
+            SYSCTL_CMD,
+            ["kernel.unprivileged_bpf_disabled"],
+            "kernel.unprivileged_bpf_disabled = 1",
+        ) {
+            if !found {
+                result.error = "Unprivileged eBPF is not disabled".to_string();
+                result.status = results::CheckStatus::FAIL;
+            } else {
+                result.status = results::CheckStatus::PASS;
+            }
+        } else {
+            result.error = "unable to verify kernel.unprivileged_bpf_disabled setting".to_string();
+        }
+
+        result
+    }
+
+    fn metadata(&self) -> results::CheckerMetadata {
+        results::CheckerMetadata {
+            title: "Ensure unprivileged eBPF is disabled".to_string(),
+            id: "1.4.3".to_string(),
+            level: 1,
+            name: "br01040300".to_string(),
+            mode: results::Mode::Automatic,
+        }
+    }
+}
